@@ -1,1 +1,1 @@
-# LS-05-02-2017-1430406
+codigo de estudiante: 1430406

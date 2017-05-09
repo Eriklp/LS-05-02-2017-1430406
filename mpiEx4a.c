@@ -4,6 +4,7 @@
 int main(int argc,char *argv[]){
 	int i, sum, sumTotal, upToVal;
 	int start, end, size, rank;
+	MPI_Status Stat;
 
 	upToVal = 10000;
 
@@ -14,13 +15,22 @@ int main(int argc,char *argv[]){
 	// Defina aqui el segmento que debe procesar una tarea
 	// El inicio del segmento en la variable 'start', el fin del segmento
 	// la variable 'end'
+		int cs = 10000/size;
     	sum = 0;
-    	for(i=start; i<= end; i++){
+    	for(i=(cs*rank) + 1; i<= cs * (rank + 1); i++){
     		sum = sum +i;
     	}
+	printf("%d %d \n", rank , sum);
+	if(rank == 0){
+		for(i = 1; i < size; i++){
+			MPI_Recv(&sumTotal, 1, MPI_INT, i, 1, MPI_COMM_WORLD, &Stat);
+			sum += sumTotal;
+		}
+		printf ("\nTotal: %d\n",sum);
+	}else {MPI_Send(&sum, 1, MPI_INT, 0, 1, MPI_COMM_WORLD); }
 	// Utilice la funcion 'MPI_Reduce' para guardar en la variable 
 	// 'sumTotal' la suma parcial de todos las tareas 
-	printf ("\nTotal: %d\n",sumTotal);
+	
 
 	MPI_Finalize();
 	

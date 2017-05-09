@@ -12,7 +12,7 @@ int main(int argc,char *argv[]){
 	MPI_Comm_size(MPI_COMM_WORLD, &size);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-		int cs = 10000/size;
+		int cs = upToVal/size;
     	sum = 0;
     	for(i=(cs*rank) + 1; i<= cs * (rank + 1); i++){
     		sum = sum +i;

@@ -1,1 +1,2 @@
 codigo de estudiante: 1430406
+Sobre el archivo Axb.c la idea es que el proceso maestro recorra la matris fila por fila creando un vector en cada una y enviandolo a cada proceso el vector de cada fila y al recivir los resultados el nodo maestro verifica quien le manda la respuesta este hubica el resultado en la respectiva posicion de 'x' y por el lado de los trabajadores, reciben los dos vectores y dependiendo del mensaje que envio el maestro realizan la operacion o terminan la ejecucion.

@@ -53,7 +53,7 @@ tareas a procesar.
 Para ello el trabajador debe recibir mensajes con cualquier TAG, MPI_ANY_TAG, y despues
 validar, en la variable 'status' que tipo de mensaje es, si TAGVECTOR o TAGPARAR.
 **/
-int receive(int);
+int receive(int, int*);
 /**
 Funcion usada para imprimir una matrix de tamano MAXFILAS x MAXCOL.
 **/
@@ -63,6 +63,8 @@ Funcion usada para imprimir un vector.
 **/
 int printvector(int, int*);
 
+MPI_Status stat;
+int vect[MAXCOL];
 /**
 Funcion 'main'
 **/
@@ -73,7 +75,8 @@ int main(int argc, char **argv) {
 	int rank;
 	int size;
 	int i,j;
-
+	
+	
 	/* Inicializacion de 'matrix' y vector 'b' */
 	for (i = 0; i < MAXFILAS; i++) 
 		for (j = 0; j < MAXCOL; j++) {
@@ -81,7 +84,6 @@ int main(int argc, char **argv) {
 			if (i == 0) 
 				b[j] = i*MAXCOL + j;
 		}
-	
 	MPI_Init(&argc, &argv);
 
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -104,7 +106,7 @@ int main(int argc, char **argv) {
 		printf("Vector resultado\n");
 		printvector(MAXFILAS, x);
 	} else { // el trabajador espera por filas que procesar
-		receive(rank);
+		receive(rank, b);
 	}
 
 	MPI_Finalize();
@@ -116,7 +118,7 @@ Este metodo se encarga de enviar el vector 'v' a cada uno de los procesos.
 int sendvector(int dim, int size, int *v) {
 	int i;
 	for (i = 1; i < size; i++) // Enviar vector 'b' a todos
-		MPI_Send(v,dim,MPI_INT,i,TAGVECTOR,MPI_COMM_WORLD);
+		MPI_Send(v, dim, MPI_INT, i, TAGVECTOR, MPI_COMM_WORLD);
 	return 0;
 }
 
@@ -124,16 +126,48 @@ int sendvector(int dim, int size, int *v) {
 Metodo usado por el maestro para distribuir las filas
 */
 int distributereceive(int f, int c, int *m, int *x, int size) {
+	
+	int valor;
+	int aux[size - 1];
+	if(f < (size - 1)) {
+		for(int i = (size - (size - f)); i < f; i++){
+			MPI_Send(vect, c, MPI_INT, i, TAGPARAR, MPI_COMM_WORLD);
+		}
+	}
+	for(int i = 0; i < f; i++){
+		int vect[MAXCOL];
+		for(int y= 0; y < c; y++){
+			vect[y] = *(m+i*MAXCOL + y);
+		}
+		int w = 0;
+		while(w < size){
+				MPI_Send(&vect, c, MPI_INT, w, TAGTAREA, MPI_COMM_WORLD);
+				w++;
+				if(w = size){
+					w = 0;
+				}	
+		}
+			
+	}
+	MPI_Recv(&valor, 1, MPI_INT, MPI_ANY_SOURCE, TAGVECTOR, MPI_COMM_WORLD, &stat);
+	aux[(stat.MPI_SOURCE - 1)] = valor;
+	for(int in = 0; in < MAXFILAS; in ++){
+		if(in < size){
+			x[in] = aux[in];
+		}else{
+			x[in] = aux[in - (size - 1)];
+		}
+	}
+
+	return 0;
 	/*
 	Mientras haya filas de la matrix que procesar, envie a los procesos. Siga
 	enviando filas hasta que se recorran todas las filas de la matrix. 
 	Reciba los resultados de los procesos, cada proceso debe devolver un valor
 	entero resultado de multiplicar una fila de la matrix por el vector 'b'.
-
 	Si no hay mas filas que procesar enviar un mensaje a los procesos para que 
 	detengan su ejecucion.
 	*/
-	return 0;
 }
 
 /**
@@ -144,7 +178,19 @@ proceso trabajador recibe dicha fila y la multiplica por el b. El resultado de
 dicha multiplicacion es enviada al maestro que ira guardando el resultado en 
 cada posicion del vector respuesta 'x'.
 */
-int receive(int rank) {
+int receive(int rank, int *b) {
+	MPI_Recv(&b, MAXCOL, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &stat);
+	MPI_Recv(&vect, MAXCOL, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &stat);
+	if(stat.MPI_TAG == TAGTAREA || stat.MPI_TAG == TAGVECTOR){
+		int valor = 0;
+		for(int i = 0; i < MAXCOL; i++){
+		valor += b[i] * vect[i];
+		}
+	MPI_Send(&valor, 1, MPI_INT, 0, TAGRESULT, MPI_COMM_WORLD);
+	}else if(stat.MPI_TAG == TAGPARAR){
+		MPI_Finalize();
+	}
+	
 	/*
 	Este metodo ejecutado por cada proceso trabajador debe 
 	1- recibir el vector 'b'

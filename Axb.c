@@ -143,7 +143,7 @@ int distributereceive(int f, int c, int *m, int *x, int size) {
 		while(w < size){
 				MPI_Send(&vect, c, MPI_INT, w, TAGTAREA, MPI_COMM_WORLD);
 				w++;
-				if(w = size){
+				if(w == size){
 					w = 0;
 				}	
 		}
